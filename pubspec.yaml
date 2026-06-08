@@ -1,0 +1,41 @@
+name: itp_system_flutter
+description: ITP System - Inspection & Test Plan Mobile App
+publish_to: 'none'
+version: 1.0.0+1
+
+environment:
+  sdk: ^3.11.0
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+  # Core
+  dio: ^5.4.0
+  flutter_secure_storage: ^9.0.0
+  provider: ^6.1.0
+  go_router: ^14.0.0
+
+  # UI
+  cached_network_image: ^3.3.0
+  shimmer: ^3.0.0
+  fluttertoast: ^8.2.4
+  percent_indicator: ^4.2.3
+
+  # File upload
+  image_picker: ^1.1.2
+
+  # Storage
+  shared_preferences: ^2.2.0
+
+  # Utils
+  intl: ^0.19.0
+  cupertino_icons: ^1.0.8
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^6.0.0
+
+flutter:
+  uses-material-design: true
