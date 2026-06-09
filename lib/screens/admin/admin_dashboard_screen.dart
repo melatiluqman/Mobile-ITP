@@ -9,6 +9,9 @@ import '../../models/project_model.dart';
 import '../../core/constants.dart';
 import '../../widgets/common/error_view.dart';
 import '../../widgets/common/confirm_dialog.dart';
+import '../../widgets/admin/create_user_sheet.dart';
+import '../../widgets/admin/create_project_sheet.dart';
+import '../../widgets/admin/assign_user_sheet.dart';
 
 class AdminDashboardScreen extends StatefulWidget {
   const AdminDashboardScreen({super.key});
@@ -30,10 +33,11 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final isGalangan = context.watch<AuthProvider>().user?.isAdminGalangan ?? false;
     return Scaffold(
       backgroundColor: const Color(0xFFF8FAFC),
       appBar: AppBar(
-        title: const Text('Admin Dashboard'),
+        title: Text(isGalangan ? 'Dashboard Admin Galangan' : 'Dashboard Admin'),
         backgroundColor: const Color(0xFF0F172A),
         foregroundColor: Colors.white,
         elevation: 0,
@@ -42,13 +46,6 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
             icon: const Icon(Icons.history_outlined),
             tooltip: 'Log Aktivitas',
             onPressed: () => context.push('/admin/logs'),
-          ),
-          IconButton(
-            icon: const Icon(Icons.logout_outlined),
-            tooltip: 'Logout',
-            onPressed: () async {
-              await context.read<AuthProvider>().logout();
-            },
           ),
         ],
       ),
@@ -73,7 +70,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
             child: ListView(
               padding: EdgeInsets.zero,
               children: [
-                _DashboardHeader(dash: dash),
+                _DashboardHeader(dash: dash, isGalangan: isGalangan),
                 Padding(
                   padding: const EdgeInsets.all(16),
                   child: Column(
@@ -81,7 +78,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                     children: [
                       _StatsRow(dash: dash),
                       const SizedBox(height: 20),
-                      _QuickActions(provider: provider),
+                      const _QuickActions(),
                       const SizedBox(height: 20),
                       _UsersSection(dash: dash, provider: provider),
                       const SizedBox(height: 20),
@@ -106,7 +103,8 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
 // ──────────────────────────────────────────────────────────
 class _DashboardHeader extends StatelessWidget {
   final DashboardStatsModel dash;
-  const _DashboardHeader({required this.dash});
+  final bool isGalangan;
+  const _DashboardHeader({required this.dash, required this.isGalangan});
 
   @override
   Widget build(BuildContext context) {
@@ -139,9 +137,9 @@ class _DashboardHeader extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text(
-                  'Panel Admin',
-                  style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold),
+                Text(
+                  isGalangan ? 'Panel Admin Galangan' : 'Panel Admin Monitoring',
+                  style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold),
                 ),
                 Text(
                   '${dash.totalProjects} proyek · ${dash.totalUsers} pengguna',
@@ -218,9 +216,21 @@ class _StatCard extends StatelessWidget {
 // ──────────────────────────────────────────────────────────
 // Quick Actions
 // ──────────────────────────────────────────────────────────
+void _openSheet(BuildContext context, Widget sheet) {
+  showModalBottomSheet(
+    context: context,
+    isScrollControlled: true,
+    useSafeArea: true,
+    backgroundColor: Colors.transparent,
+    builder: (ctx) => Padding(
+      padding: MediaQuery.of(ctx).viewInsets,
+      child: sheet,
+    ),
+  );
+}
+
 class _QuickActions extends StatelessWidget {
-  final AdminProvider provider;
-  const _QuickActions({required this.provider});
+  const _QuickActions();
 
   @override
   Widget build(BuildContext context) {
@@ -239,7 +249,7 @@ class _QuickActions extends StatelessWidget {
                 icon: Icons.person_add_outlined,
                 label: 'Tambah User',
                 color: const Color(0xFF3B82F6),
-                onTap: () => showDialog(context: context, builder: (_) => _CreateUserDialog(provider: provider)),
+                onTap: () => _openSheet(context, const CreateUserSheet()),
               ),
             ),
             const SizedBox(width: 10),
@@ -248,7 +258,7 @@ class _QuickActions extends StatelessWidget {
                 icon: Icons.add_business_outlined,
                 label: 'Tambah Proyek',
                 color: const Color(0xFF10B981),
-                onTap: () => showDialog(context: context, builder: (_) => _CreateProjectDialog(provider: provider)),
+                onTap: () => _openSheet(context, const CreateProjectSheet()),
               ),
             ),
           ],
@@ -489,7 +499,7 @@ class _ProjectsSection extends StatelessWidget {
             ),
           )
         else
-          ...dash.projects.map((p) => _ProjectRow(project: p, provider: provider, users: dash.users)),
+          ...dash.projects.map((p) => _ProjectRow(project: p, provider: provider)),
       ],
     );
   }
@@ -498,8 +508,7 @@ class _ProjectsSection extends StatelessWidget {
 class _ProjectRow extends StatelessWidget {
   final ProjectModel project;
   final AdminProvider provider;
-  final List<UserModel> users;
-  const _ProjectRow({required this.project, required this.provider, required this.users});
+  const _ProjectRow({required this.project, required this.provider});
 
   @override
   Widget build(BuildContext context) {
@@ -605,14 +614,7 @@ class _ProjectRow extends StatelessWidget {
             child: Row(
               children: [
                 TextButton.icon(
-                  onPressed: () => showDialog(
-                    context: context,
-                    builder: (_) => _AssignUserDialog(
-                      projectId: project.id,
-                      provider: provider,
-                      users: users,
-                    ),
-                  ),
+                  onPressed: () => _openSheet(context, AssignUserSheet(projectId: project.id)),
                   icon: const Icon(Icons.person_add_outlined, size: 14),
                   label: const Text('Assign', style: TextStyle(fontSize: 12)),
                   style: TextButton.styleFrom(foregroundColor: const Color(0xFF3B82F6)),
@@ -733,314 +735,4 @@ class _ActivityTile extends StatelessWidget {
           ),
         ),
       );
-}
-
-// ──────────────────────────────────────────────────────────
-// Dialogs
-// ──────────────────────────────────────────────────────────
-class _CreateUserDialog extends StatefulWidget {
-  final AdminProvider provider;
-  const _CreateUserDialog({required this.provider});
-
-  @override
-  State<_CreateUserDialog> createState() => _CreateUserDialogState();
-}
-
-class _CreateUserDialogState extends State<_CreateUserDialog> {
-  final _formKey = GlobalKey<FormState>();
-  final _nameCtrl = TextEditingController();
-  final _usernameCtrl = TextEditingController();
-  final _passwordCtrl = TextEditingController();
-  String _role = 'yard';
-
-  @override
-  void dispose() {
-    _nameCtrl.dispose();
-    _usernameCtrl.dispose();
-    _passwordCtrl.dispose();
-    super.dispose();
-  }
-
-  Future<void> _submit() async {
-    if (!_formKey.currentState!.validate()) return;
-    final ok = await widget.provider.createUser(
-      name: _nameCtrl.text.trim(),
-      username: _usernameCtrl.text.trim(),
-      password: _passwordCtrl.text,
-      role: _role,
-      onError: (msg) => ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(msg), backgroundColor: Colors.red),
-      ),
-    );
-    if (ok && mounted) Navigator.pop(context);
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return AlertDialog(
-      title: const Row(
-        children: [
-          Icon(Icons.person_add_outlined, color: Color(0xFF3B82F6), size: 20),
-          SizedBox(width: 8),
-          Text('Tambah User', style: TextStyle(fontSize: 16)),
-        ],
-      ),
-      content: Form(
-        key: _formKey,
-        child: SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              TextFormField(
-                controller: _nameCtrl,
-                decoration: const InputDecoration(labelText: 'Nama Lengkap', border: OutlineInputBorder()),
-                validator: (v) => (v == null || v.isEmpty) ? 'Nama wajib diisi' : null,
-              ),
-              const SizedBox(height: 10),
-              TextFormField(
-                controller: _usernameCtrl,
-                decoration: const InputDecoration(labelText: 'Username', border: OutlineInputBorder()),
-                validator: (v) => (v == null || v.isEmpty) ? 'Username wajib diisi' : null,
-              ),
-              const SizedBox(height: 10),
-              TextFormField(
-                controller: _passwordCtrl,
-                obscureText: true,
-                decoration: const InputDecoration(labelText: 'Password', border: OutlineInputBorder()),
-                validator: (v) => (v == null || v.length < 4) ? 'Min 4 karakter' : null,
-              ),
-              const SizedBox(height: 10),
-              DropdownButtonFormField<String>(
-                initialValue: _role,
-                decoration: const InputDecoration(labelText: 'Role', border: OutlineInputBorder()),
-                items: AppConstants.roles
-                    .map((r) => DropdownMenuItem(value: r, child: Text(AppConstants.roleLabels[r] ?? r)))
-                    .toList(),
-                onChanged: (v) => setState(() => _role = v ?? 'yard'),
-              ),
-            ],
-          ),
-        ),
-      ),
-      actions: [
-        TextButton(onPressed: () => Navigator.pop(context), child: const Text('Batal')),
-        Consumer<AdminProvider>(
-          builder: (context, p, _) => ElevatedButton(
-            style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF3B82F6), foregroundColor: Colors.white),
-            onPressed: p.isLoading ? null : _submit,
-            child: p.isLoading
-                ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
-                : const Text('Simpan'),
-          ),
-        ),
-      ],
-    );
-  }
-}
-
-class _CreateProjectDialog extends StatefulWidget {
-  final AdminProvider provider;
-  const _CreateProjectDialog({required this.provider});
-
-  @override
-  State<_CreateProjectDialog> createState() => _CreateProjectDialogState();
-}
-
-class _CreateProjectDialogState extends State<_CreateProjectDialog> {
-  final _formKey = GlobalKey<FormState>();
-  final _namaCtrl = TextEditingController();
-  final _kodeCtrl = TextEditingController();
-  final _deskripsiCtrl = TextEditingController();
-  final _startCtrl = TextEditingController();
-  final _deadlineCtrl = TextEditingController();
-  int? _templateId;
-
-  @override
-  void dispose() {
-    _namaCtrl.dispose();
-    _kodeCtrl.dispose();
-    _deskripsiCtrl.dispose();
-    _startCtrl.dispose();
-    _deadlineCtrl.dispose();
-    super.dispose();
-  }
-
-  Future<void> _pickDate(TextEditingController ctrl) async {
-    final picked = await showDatePicker(
-      context: context,
-      initialDate: DateTime.now(),
-      firstDate: DateTime(2020),
-      lastDate: DateTime(2035),
-    );
-    if (picked != null) ctrl.text = picked.toIso8601String().split('T').first;
-  }
-
-  Future<void> _submit() async {
-    if (!_formKey.currentState!.validate()) return;
-    final ok = await widget.provider.createProject(
-      namaProject: _namaCtrl.text.trim(),
-      kodeProject: _kodeCtrl.text.trim(),
-      deskripsi: _deskripsiCtrl.text.trim().isEmpty ? null : _deskripsiCtrl.text.trim(),
-      tanggalMulai: _startCtrl.text.isEmpty ? null : _startCtrl.text,
-      deadline: _deadlineCtrl.text.isEmpty ? null : _deadlineCtrl.text,
-      templateId: _templateId,
-      onError: (msg) => ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(msg), backgroundColor: Colors.red),
-      ),
-    );
-    if (ok && mounted) Navigator.pop(context);
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final templates = context.watch<AdminProvider>().templates;
-    return AlertDialog(
-      title: const Row(
-        children: [
-          Icon(Icons.add_business_outlined, color: Color(0xFF10B981), size: 20),
-          SizedBox(width: 8),
-          Text('Buat Proyek', style: TextStyle(fontSize: 16)),
-        ],
-      ),
-      content: Form(
-        key: _formKey,
-        child: SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              TextFormField(
-                controller: _namaCtrl,
-                decoration: const InputDecoration(labelText: 'Nama Proyek', border: OutlineInputBorder()),
-                validator: (v) => (v == null || v.isEmpty) ? 'Wajib diisi' : null,
-              ),
-              const SizedBox(height: 10),
-              TextFormField(
-                controller: _kodeCtrl,
-                decoration: const InputDecoration(labelText: 'Kode Proyek', border: OutlineInputBorder()),
-                validator: (v) => (v == null || v.isEmpty) ? 'Wajib diisi' : null,
-              ),
-              const SizedBox(height: 10),
-              TextFormField(
-                controller: _deskripsiCtrl,
-                decoration: const InputDecoration(labelText: 'Deskripsi', border: OutlineInputBorder()),
-                maxLines: 2,
-              ),
-              const SizedBox(height: 10),
-              TextFormField(
-                controller: _startCtrl,
-                readOnly: true,
-                decoration: const InputDecoration(
-                  labelText: 'Tanggal Mulai',
-                  border: OutlineInputBorder(),
-                  suffixIcon: Icon(Icons.calendar_today, size: 16),
-                ),
-                onTap: () => _pickDate(_startCtrl),
-              ),
-              const SizedBox(height: 10),
-              TextFormField(
-                controller: _deadlineCtrl,
-                readOnly: true,
-                decoration: const InputDecoration(
-                  labelText: 'Deadline',
-                  border: OutlineInputBorder(),
-                  suffixIcon: Icon(Icons.calendar_today, size: 16),
-                ),
-                onTap: () => _pickDate(_deadlineCtrl),
-              ),
-              if (templates.isNotEmpty) ...[
-                const SizedBox(height: 10),
-                DropdownButtonFormField<int>(
-                  initialValue: _templateId,
-                  decoration: const InputDecoration(labelText: 'Template (Opsional)', border: OutlineInputBorder()),
-                  items: [
-                    const DropdownMenuItem(value: null, child: Text('Tanpa Template')),
-                    ...templates.map((t) => DropdownMenuItem(value: t.id, child: Text(t.name))),
-                  ],
-                  onChanged: (v) => setState(() => _templateId = v),
-                ),
-              ],
-            ],
-          ),
-        ),
-      ),
-      actions: [
-        TextButton(onPressed: () => Navigator.pop(context), child: const Text('Batal')),
-        Consumer<AdminProvider>(
-          builder: (context, p, _) => ElevatedButton(
-            style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF10B981), foregroundColor: Colors.white),
-            onPressed: p.isLoading ? null : _submit,
-            child: p.isLoading
-                ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
-                : const Text('Simpan'),
-          ),
-        ),
-      ],
-    );
-  }
-}
-
-class _AssignUserDialog extends StatefulWidget {
-  final int projectId;
-  final AdminProvider provider;
-  final List<UserModel> users;
-  const _AssignUserDialog({required this.projectId, required this.provider, required this.users});
-
-  @override
-  State<_AssignUserDialog> createState() => _AssignUserDialogState();
-}
-
-class _AssignUserDialogState extends State<_AssignUserDialog> {
-  int? _selectedUserId;
-
-  @override
-  Widget build(BuildContext context) {
-    return AlertDialog(
-      title: const Row(
-        children: [
-          Icon(Icons.person_add_outlined, color: Color(0xFF3B82F6), size: 20),
-          SizedBox(width: 8),
-          Text('Assign User', style: TextStyle(fontSize: 16)),
-        ],
-      ),
-      content: DropdownButtonFormField<int>(
-        initialValue: _selectedUserId,
-        decoration: const InputDecoration(labelText: 'Pilih Pengguna', border: OutlineInputBorder()),
-        items: widget.users
-            .where((u) => !u.isSuperAdmin)
-            .map((u) => DropdownMenuItem(
-                  value: u.id,
-                  child: Text('${u.name} (${AppConstants.roleLabels[u.role] ?? u.role})'),
-                ))
-            .toList(),
-        onChanged: (v) => setState(() => _selectedUserId = v),
-      ),
-      actions: [
-        TextButton(onPressed: () => Navigator.pop(context), child: const Text('Batal')),
-        ElevatedButton(
-          style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF3B82F6), foregroundColor: Colors.white),
-          onPressed: _selectedUserId == null
-              ? null
-              : () async {
-                  final ok = await widget.provider.assignUser(
-                    widget.projectId,
-                    _selectedUserId!,
-                    onError: (msg) => ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(content: Text(msg), backgroundColor: Colors.red),
-                    ),
-                  );
-                  if (ok && context.mounted) {
-                    Navigator.pop(context);
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text('User berhasil di-assign ke proyek'),
-                        backgroundColor: Color(0xFF10B981),
-                      ),
-                    );
-                  }
-                },
-          child: const Text('Assign'),
-        ),
-      ],
-    );
-  }
 }

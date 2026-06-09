@@ -131,7 +131,7 @@ class _ProjectListScreenState extends State<ProjectListScreen> {
                         crossAxisCount: 2,
                         crossAxisSpacing: 12,
                         mainAxisSpacing: 12,
-                        childAspectRatio: 0.75,
+                        mainAxisExtent: 272,
                       ),
                       itemCount: provider.projects.length,
                       itemBuilder: (context, i) => _ProjectCard(

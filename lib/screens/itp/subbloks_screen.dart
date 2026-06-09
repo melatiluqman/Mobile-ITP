@@ -93,7 +93,26 @@ class _SubBlokCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final percent = subblok.progress.percent;
+    final done = subblok.progress.done;
     final progressColor = percent == 100 ? _success : _primary;
+
+    // Status (§3.4): selesai / progress / pending
+    final String statusLabel;
+    final Color statusColor;
+    final IconData statusIcon;
+    if (percent == 100) {
+      statusLabel = 'Selesai';
+      statusColor = _success;
+      statusIcon = Icons.check_circle;
+    } else if (done > 0) {
+      statusLabel = 'Progress';
+      statusColor = const Color(0xFFD97706);
+      statusIcon = Icons.autorenew;
+    } else {
+      statusLabel = 'Pending';
+      statusColor = const Color(0xFF94A3B8);
+      statusIcon = Icons.layers_outlined;
+    }
 
     return Container(
       margin: const EdgeInsets.only(bottom: 10),
@@ -123,10 +142,10 @@ class _SubBlokCard extends StatelessWidget {
                     width: 36,
                     height: 36,
                     decoration: BoxDecoration(
-                      color: _primary.withAlpha(18),
+                      color: statusColor.withAlpha(20),
                       borderRadius: BorderRadius.circular(10),
                     ),
-                    child: const Icon(Icons.grid_view_outlined, color: _primary, size: 18),
+                    child: Icon(statusIcon, color: statusColor, size: 18),
                   ),
                   const SizedBox(width: 12),
                   Expanded(
@@ -139,6 +158,18 @@ class _SubBlokCard extends StatelessWidget {
                       ),
                     ),
                   ),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                    decoration: BoxDecoration(
+                      color: statusColor.withAlpha(20),
+                      borderRadius: BorderRadius.circular(6),
+                    ),
+                    child: Text(
+                      statusLabel,
+                      style: TextStyle(fontSize: 10, fontWeight: FontWeight.w700, color: statusColor),
+                    ),
+                  ),
+                  const SizedBox(width: 4),
                   const Icon(Icons.chevron_right, color: Color(0xFF94A3B8), size: 20),
                 ],
               ),

@@ -90,6 +90,7 @@ class _AssemblyScreenState extends State<AssemblyScreen> {
                     slivers: [
                       SliverToBoxAdapter(child: _buildHeader()),
                       SliverToBoxAdapter(child: _buildSummary()),
+                      SliverToBoxAdapter(child: _buildQuickInfo()),
                       SliverToBoxAdapter(child: _buildSearch()),
                       if (_filtered.isEmpty)
                         const SliverFillRemaining(
@@ -220,6 +221,49 @@ class _AssemblyScreenState extends State<AssemblyScreen> {
               valueColor: AlwaysStoppedAnimation<Color>(
                 percent == 100 ? const Color(0xFF10B981) : _primary,
               ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildQuickInfo() {
+    return Container(
+      margin: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: const Color(0xFFFEF2F2),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: const Color(0xFFFEE2E2)),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            width: 28,
+            height: 28,
+            decoration: BoxDecoration(
+              color: _primary.withAlpha(20),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: const Icon(Icons.info_outline, color: _primary, size: 16),
+          ),
+          const SizedBox(width: 10),
+          const Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Klik baris ITP untuk upload data.',
+                  style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: Color(0xFF991B1B)),
+                ),
+                SizedBox(height: 2),
+                Text(
+                  'Status ACC berarti telah disetujui Class/Owner.',
+                  style: TextStyle(fontSize: 11, color: Color(0xFFB91C1C)),
+                ),
+              ],
             ),
           ),
         ],
@@ -518,7 +562,7 @@ class _InspectionRow extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.end,
               children: [
                 // My role val badge
-                _ValBadge(value: _myRoleVal(itp)),
+                _ValBadge(value: itp.myVal ?? '-'),
                 const SizedBox(height: 4),
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
@@ -543,15 +587,6 @@ class _InspectionRow extends StatelessWidget {
         ),
       ),
     );
-  }
-
-  String _myRoleVal(InspectionModel itp) {
-    // Show the most relevant val — if canSubmit, show that val
-    if (itp.yardVal != null && itp.yardVal!.isNotEmpty) return itp.yardVal!;
-    if (itp.classVal != null && itp.classVal!.isNotEmpty) return itp.classVal!;
-    if (itp.osVal != null && itp.osVal!.isNotEmpty) return itp.osVal!;
-    if (itp.statVal != null && itp.statVal!.isNotEmpty) return itp.statVal!;
-    return '-';
   }
 }
 

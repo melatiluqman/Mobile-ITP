@@ -102,6 +102,18 @@ class _AppRouterState extends State<_AppRouter> {
             ),
           ),
           routerConfig: _router,
+          builder: (context, child) {
+            // Keep layouts consistent across devices: respect the user's font
+            // size setting but cap it so larger system fonts don't overflow
+            // fixed-height cards/rows.
+            final mq = MediaQuery.of(context);
+            return MediaQuery(
+              data: mq.copyWith(
+                textScaler: mq.textScaler.clamp(minScaleFactor: 1.0, maxScaleFactor: 1.1),
+              ),
+              child: child!,
+            );
+          },
         );
       },
     );

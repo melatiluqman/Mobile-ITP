@@ -145,6 +145,8 @@ class ProfileScreen extends StatelessWidget {
                         context,
                         title: 'Logout',
                         content: 'Yakin ingin keluar dari akun ini?',
+                        confirmLabel: 'Logout',
+                        icon: Icons.logout,
                       );
                       if (confirmed && context.mounted) {
                         await context.read<AuthProvider>().logout();

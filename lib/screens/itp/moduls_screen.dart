@@ -18,6 +18,7 @@ class ModulsScreen extends StatefulWidget {
 class _ModulsScreenState extends State<ModulsScreen> {
   List<ModulModel> _moduls = [];
   Map<String, dynamic>? _project;
+  int? _dayN;
   bool _loading = true;
   String? _error;
 
@@ -41,6 +42,7 @@ class _ModulsScreenState extends State<ModulsScreen> {
           _moduls = result['moduls'] as List<ModulModel>;
           final p = result['project'];
           _project = p is Map ? p.cast<String, dynamic>() : null;
+          _dayN = result['day_n'] is int ? result['day_n'] as int : int.tryParse('${result['day_n']}');
         } else {
           _error = context.read<ItpProvider>().error;
         }
@@ -75,23 +77,7 @@ class _ModulsScreenState extends State<ModulsScreen> {
                           child: EmptyView(message: 'Belum ada modul di project ini'),
                         )
                       else
-                        SliverPadding(
-                          padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
-                          sliver: SliverGrid.builder(
-                            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                              crossAxisCount: 2,
-                              crossAxisSpacing: 12,
-                              mainAxisSpacing: 12,
-                              childAspectRatio: 0.78,
-                            ),
-                            itemCount: _moduls.length,
-                            itemBuilder: (context, i) => _ModulCard(
-                              modul: _moduls[i],
-                              projectId: widget.projectId,
-                              index: i,
-                            ),
-                          ),
-                        ),
+                        ..._buildPhaseSlivers(),
                     ],
                   ),
                 ),
@@ -159,19 +145,41 @@ class _ModulsScreenState extends State<ModulsScreen> {
                   'Kode: $_projectCode${deadlineText != null ? '  •  Deadline: $deadlineText' : ''}',
                   style: const TextStyle(color: Color(0xFF94A3B8), fontSize: 12),
                 ),
+                if (_dayN != null) ...[
+                  const SizedBox(height: 10),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withAlpha(40),
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: Colors.white.withAlpha(70)),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Icon(Icons.today_outlined, size: 13, color: Colors.white),
+                        const SizedBox(width: 5),
+                        Text(
+                          'Hari ke-$_dayN',
+                          style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w800),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
                 const SizedBox(height: 12),
-                Row(
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
                   children: [
                     _HeaderChip(
                       label: '${_moduls.length} Modul',
                       icon: Icons.layers_outlined,
                     ),
-                    const SizedBox(width: 8),
                     _HeaderChip(
                       label: '${_moduls.where((m) => m.isActive).length} Aktif',
                       icon: Icons.bolt,
                     ),
-                    const SizedBox(width: 8),
                     _HeaderChip(
                       label: '${_moduls.where((m) => m.isCompleted).length} Selesai',
                       icon: Icons.check_circle_outline,
@@ -184,6 +192,79 @@ class _ModulsScreenState extends State<ModulsScreen> {
         ],
       ),
     );
+  }
+
+  // Group moduls into phases by start_day (§3.2), preserving order.
+  List<Widget> _buildPhaseSlivers() {
+    final phaseKeys = <int?>[];
+    final phases = <int?, List<ModulModel>>{};
+    for (final m in _moduls) {
+      if (!phases.containsKey(m.startDay)) {
+        phaseKeys.add(m.startDay);
+        phases[m.startDay] = [];
+      }
+      phases[m.startDay]!.add(m);
+    }
+    // Sort phases by start day; unscheduled (null) goes last.
+    phaseKeys.sort((a, b) {
+      if (a == null) return 1;
+      if (b == null) return -1;
+      return a.compareTo(b);
+    });
+
+    final slivers = <Widget>[];
+    for (var p = 0; p < phaseKeys.length; p++) {
+      final key = phaseKeys[p];
+      final items = phases[key]!;
+      slivers.add(SliverToBoxAdapter(
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(16, 4, 16, 8),
+          child: Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFDC2626).withAlpha(15),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Text(
+                  'FASE ${p + 1}',
+                  style: const TextStyle(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w800,
+                    letterSpacing: 0.8,
+                    color: Color(0xFFDC2626),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Text(
+                key != null ? 'Mulai hari ke-$key' : 'Belum dijadwalkan',
+                style: const TextStyle(fontSize: 11, color: Color(0xFF94A3B8), fontWeight: FontWeight.w600),
+              ),
+            ],
+          ),
+        ),
+      ));
+      slivers.add(SliverPadding(
+        padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+        sliver: SliverGrid.builder(
+          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+            crossAxisCount: 2,
+            crossAxisSpacing: 12,
+            mainAxisSpacing: 12,
+            mainAxisExtent: 242,
+          ),
+          itemCount: items.length,
+          itemBuilder: (context, i) => _ModulCard(
+            modul: items[i],
+            projectId: widget.projectId,
+            index: _moduls.indexOf(items[i]),
+          ),
+        ),
+      ));
+    }
+    return slivers;
   }
 
   String? _formatDeadline(String? dateStr) {

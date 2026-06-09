@@ -79,10 +79,11 @@ class _ProjectStructureScreenState extends State<ProjectStructureScreen> {
   }
 
   void _showAddModulDialog(BuildContext context, AdminProvider provider) {
-    showDialog(
-      context: context,
-      builder: (_) => _SimpleInputDialog(
+    _showInputSheet(
+      context,
+      _SimpleInputSheet(
         title: 'Tambah Modul',
+        subtitle: 'Buat modul baru di proyek ini',
         label: 'Nama Modul',
         icon: Icons.view_module_outlined,
         color: const Color(0xFF3B82F6),
@@ -233,24 +234,31 @@ class _ModulTileState extends State<_ModulTile> {
   }
 
   void _showScheduleDialog(BuildContext context) {
-    showDialog(
+    showModalBottomSheet(
       context: context,
-      builder: (_) => _ScheduleDialog(
-        modul: widget.modul,
-        onSubmit: (start, duration) => widget.provider.setModulSchedule(
-          widget.modul.id, widget.projectId, start, duration,
-          onError: (msg) => ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(content: Text(msg), backgroundColor: Colors.red)),
+      isScrollControlled: true,
+      useSafeArea: true,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) => Padding(
+        padding: MediaQuery.of(ctx).viewInsets,
+        child: _ScheduleSheet(
+          modul: widget.modul,
+          onSubmit: (start, duration) => widget.provider.setModulSchedule(
+            widget.modul.id, widget.projectId, start, duration,
+            onError: (msg) => ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(content: Text(msg), backgroundColor: Colors.red)),
+          ),
         ),
       ),
     );
   }
 
   void _showAddBlokDialog(BuildContext context) {
-    showDialog(
-      context: context,
-      builder: (_) => _SimpleInputDialog(
+    _showInputSheet(
+      context,
+      _SimpleInputSheet(
         title: 'Tambah Blok',
+        subtitle: 'Buat blok baru di modul ini',
         label: 'Nama Blok',
         icon: Icons.layers_outlined,
         color: const Color(0xFF10B981),
@@ -372,10 +380,11 @@ class _BlokTileState extends State<_BlokTile> {
   }
 
   void _showAddSubBlokDialog(BuildContext context) {
-    showDialog(
-      context: context,
-      builder: (_) => _SimpleInputDialog(
+    _showInputSheet(
+      context,
+      _SimpleInputSheet(
         title: 'Tambah Sub-Blok',
+        subtitle: 'Buat sub-blok baru di blok ini',
         label: 'Nama Sub-Blok',
         icon: Icons.view_agenda_outlined,
         color: const Color(0xFF8B5CF6),
@@ -497,9 +506,9 @@ class _SubBlokTileState extends State<_SubBlokTile> {
   }
 
   void _showAddItpDialog(BuildContext context) {
-    showDialog(
-      context: context,
-      builder: (_) => _AddItpDialog(
+    _showInputSheet(
+      context,
+      _AddItpSheet(
         subBlokId: widget.subBlok.id,
         projectId: widget.projectId,
         provider: widget.provider,
@@ -674,17 +683,116 @@ class _EmptyItem extends StatelessWidget {
 }
 
 // ──────────────────────────────────────────────────────────────
-// Dialogs
+// Sheets
 // ──────────────────────────────────────────────────────────────
 
-class _SimpleInputDialog extends StatefulWidget {
+/// Opens [sheet] as a modern, keyboard-aware modal bottom sheet.
+void _showInputSheet(BuildContext context, Widget sheet) {
+  showModalBottomSheet(
+    context: context,
+    isScrollControlled: true,
+    useSafeArea: true,
+    backgroundColor: Colors.transparent,
+    builder: (ctx) => Padding(
+      padding: MediaQuery.of(ctx).viewInsets,
+      child: sheet,
+    ),
+  );
+}
+
+/// Shared sheet header (drag handle + icon badge + title/subtitle).
+Widget _sheetHeader({
+  required IconData icon,
+  required Color color,
+  required String title,
+  required String subtitle,
+}) {
+  return Column(
+    mainAxisSize: MainAxisSize.min,
+    children: [
+      Container(
+        margin: const EdgeInsets.only(top: 12),
+        width: 40,
+        height: 4,
+        decoration: BoxDecoration(
+          color: const Color(0xFFCBD5E1),
+          borderRadius: BorderRadius.circular(2),
+        ),
+      ),
+      Padding(
+        padding: const EdgeInsets.fromLTRB(20, 20, 20, 0),
+        child: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: color.withAlpha(15),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Icon(icon, color: color, size: 22),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(title, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                  Text(subtitle,
+                      style: const TextStyle(fontSize: 13, color: Color(0xFF64748B)),
+                      overflow: TextOverflow.ellipsis),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    ],
+  );
+}
+
+InputDecoration _sheetInputDecoration(String label, IconData icon, Color focus,
+    {String? helper, int? maxLines}) {
+  return InputDecoration(
+    labelText: label,
+    helperText: helper,
+    prefixIcon: maxLines != null && maxLines > 1
+        ? null
+        : Icon(icon, size: 20, color: const Color(0xFF94A3B8)),
+    filled: true,
+    fillColor: const Color(0xFFF8FAFC),
+    border: OutlineInputBorder(
+      borderRadius: BorderRadius.circular(12),
+      borderSide: const BorderSide(color: Color(0xFFE2E8F0)),
+    ),
+    enabledBorder: OutlineInputBorder(
+      borderRadius: BorderRadius.circular(12),
+      borderSide: const BorderSide(color: Color(0xFFE2E8F0)),
+    ),
+    focusedBorder: OutlineInputBorder(
+      borderRadius: BorderRadius.circular(12),
+      borderSide: BorderSide(color: focus, width: 1.5),
+    ),
+    errorBorder: OutlineInputBorder(
+      borderRadius: BorderRadius.circular(12),
+      borderSide: const BorderSide(color: Colors.red),
+    ),
+    focusedErrorBorder: OutlineInputBorder(
+      borderRadius: BorderRadius.circular(12),
+      borderSide: const BorderSide(color: Colors.red, width: 1.5),
+    ),
+  );
+}
+
+class _SimpleInputSheet extends StatefulWidget {
   final String title;
+  final String subtitle;
   final String label;
   final IconData icon;
   final Color color;
   final Future<bool> Function(String) onSubmit;
-  const _SimpleInputDialog({
+  const _SimpleInputSheet({
     required this.title,
+    required this.subtitle,
     required this.label,
     required this.icon,
     required this.color,
@@ -692,10 +800,10 @@ class _SimpleInputDialog extends StatefulWidget {
   });
 
   @override
-  State<_SimpleInputDialog> createState() => _SimpleInputDialogState();
+  State<_SimpleInputSheet> createState() => _SimpleInputSheetState();
 }
 
-class _SimpleInputDialogState extends State<_SimpleInputDialog> {
+class _SimpleInputSheetState extends State<_SimpleInputSheet> {
   final _ctrl = TextEditingController();
   bool _loading = false;
 
@@ -705,57 +813,87 @@ class _SimpleInputDialogState extends State<_SimpleInputDialog> {
     super.dispose();
   }
 
+  Future<void> _submit() async {
+    if (_ctrl.text.trim().isEmpty) return;
+    setState(() => _loading = true);
+    final nav = Navigator.of(context);
+    final ok = await widget.onSubmit(_ctrl.text.trim());
+    if (!mounted) return;
+    setState(() => _loading = false);
+    if (ok) nav.pop();
+  }
+
   @override
   Widget build(BuildContext context) {
-    return AlertDialog(
-      title: Row(
+    return Container(
+      decoration: const BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(widget.icon, color: widget.color, size: 20),
-          const SizedBox(width: 8),
-          Text(widget.title, style: const TextStyle(fontSize: 16)),
+          _sheetHeader(
+            icon: widget.icon,
+            color: widget.color,
+            title: widget.title,
+            subtitle: widget.subtitle,
+          ),
+          const SizedBox(height: 16),
+          Divider(height: 1, color: Colors.grey.shade100),
+          Padding(
+            padding: const EdgeInsets.all(20),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                TextField(
+                  controller: _ctrl,
+                  autofocus: true,
+                  textInputAction: TextInputAction.done,
+                  onSubmitted: (_) => _submit(),
+                  decoration: _sheetInputDecoration(widget.label, widget.icon, widget.color),
+                ),
+                const SizedBox(height: 24),
+                SizedBox(
+                  width: double.infinity,
+                  height: 50,
+                  child: ElevatedButton(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: widget.color,
+                      foregroundColor: Colors.white,
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                      elevation: 0,
+                    ),
+                    onPressed: _loading ? null : _submit,
+                    child: _loading
+                        ? const SizedBox(
+                            width: 22,
+                            height: 22,
+                            child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2.5))
+                        : const Text('Simpan', style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600)),
+                  ),
+                ),
+                const SizedBox(height: 8),
+              ],
+            ),
+          ),
         ],
       ),
-      content: TextField(
-        controller: _ctrl,
-        autofocus: true,
-        decoration: InputDecoration(labelText: widget.label, border: const OutlineInputBorder()),
-      ),
-      actions: [
-        TextButton(onPressed: () => Navigator.pop(context), child: const Text('Batal')),
-        ElevatedButton(
-          style: ElevatedButton.styleFrom(
-              backgroundColor: widget.color, foregroundColor: Colors.white),
-          onPressed: _loading
-              ? null
-              : () async {
-                  if (_ctrl.text.trim().isEmpty) return;
-                  setState(() => _loading = true);
-                  final nav = Navigator.of(context);
-                  final ok = await widget.onSubmit(_ctrl.text.trim());
-                  if (ok && mounted) nav.pop();
-                  if (mounted) setState(() => _loading = false);
-                },
-          child: _loading
-              ? const SizedBox(
-                  width: 18, height: 18,
-                  child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
-              : const Text('Simpan'),
-        ),
-      ],
     );
   }
 }
 
-class _ScheduleDialog extends StatefulWidget {
+class _ScheduleSheet extends StatefulWidget {
   final ModulStructureModel modul;
   final Future<bool> Function(int, int) onSubmit;
-  const _ScheduleDialog({required this.modul, required this.onSubmit});
+  const _ScheduleSheet({required this.modul, required this.onSubmit});
 
   @override
-  State<_ScheduleDialog> createState() => _ScheduleDialogState();
+  State<_ScheduleSheet> createState() => _ScheduleSheetState();
 }
 
-class _ScheduleDialogState extends State<_ScheduleDialog> {
+class _ScheduleSheetState extends State<_ScheduleSheet> {
+  static const _amber = Color(0xFFF59E0B);
   late final TextEditingController _startCtrl;
   late final TextEditingController _durationCtrl;
   bool _loading = false;
@@ -776,85 +914,181 @@ class _ScheduleDialogState extends State<_ScheduleDialog> {
     super.dispose();
   }
 
+  Future<void> _submit() async {
+    final start = int.tryParse(_startCtrl.text.trim());
+    final duration = int.tryParse(_durationCtrl.text.trim());
+    if (start == null || duration == null || start < 1 || duration < 1) {
+      ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Masukkan angka valid (min 1)')));
+      return;
+    }
+    setState(() => _loading = true);
+    final nav = Navigator.of(context);
+    final ok = await widget.onSubmit(start, duration);
+    if (!mounted) return;
+    setState(() => _loading = false);
+    if (ok) nav.pop();
+  }
+
+  InputDecoration _inputDecoration(String label, IconData icon, {String? helper}) =>
+      InputDecoration(
+        labelText: label,
+        helperText: helper,
+        prefixIcon: Icon(icon, size: 20, color: const Color(0xFF94A3B8)),
+        filled: true,
+        fillColor: const Color(0xFFF8FAFC),
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: const BorderSide(color: Color(0xFFE2E8F0)),
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: const BorderSide(color: Color(0xFFE2E8F0)),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: const BorderSide(color: _amber, width: 1.5),
+        ),
+      );
+
   @override
   Widget build(BuildContext context) {
-    return AlertDialog(
-      title: Row(
-        children: const [
-          Icon(Icons.schedule, color: Color(0xFFF59E0B), size: 20),
-          SizedBox(width: 8),
-          Text('Atur Jadwal Modul', style: TextStyle(fontSize: 15)),
-        ],
+    final hasSchedule = widget.modul.startDay != null && widget.modul.durationDays != null;
+    return Container(
+      decoration: const BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
-      content: Column(
+      child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Text(widget.modul.namaModul,
-              style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),
-          const SizedBox(height: 12),
-          TextField(
-            controller: _startCtrl,
-            keyboardType: TextInputType.number,
-            decoration: const InputDecoration(
-              labelText: 'Mulai Hari ke-',
-              border: OutlineInputBorder(),
-              helperText: 'Dihitung dari tanggal mulai proyek',
+          Container(
+            margin: const EdgeInsets.only(top: 12),
+            width: 40,
+            height: 4,
+            decoration: BoxDecoration(
+              color: const Color(0xFFCBD5E1),
+              borderRadius: BorderRadius.circular(2),
             ),
           ),
-          const SizedBox(height: 10),
-          TextField(
-            controller: _durationCtrl,
-            keyboardType: TextInputType.number,
-            decoration: const InputDecoration(
-              labelText: 'Durasi (hari)',
-              border: OutlineInputBorder(),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(20, 20, 20, 0),
+            child: Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    color: _amber.withAlpha(15),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: const Icon(Icons.schedule, color: _amber, size: 22),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text('Atur Jadwal Modul',
+                          style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                      Text(widget.modul.namaModul,
+                          style: const TextStyle(fontSize: 13, color: Color(0xFF64748B)),
+                          overflow: TextOverflow.ellipsis),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 16),
+          Divider(height: 1, color: Colors.grey.shade100),
+          Flexible(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.all(20),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  TextField(
+                    controller: _startCtrl,
+                    keyboardType: TextInputType.number,
+                    decoration: _inputDecoration(
+                      'Mulai Hari ke-',
+                      Icons.flag_outlined,
+                      helper: 'Dihitung dari tanggal mulai proyek',
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  TextField(
+                    controller: _durationCtrl,
+                    keyboardType: TextInputType.number,
+                    decoration: _inputDecoration('Durasi (hari)', Icons.timelapse_outlined),
+                  ),
+                  if (hasSchedule) ...[
+                    const SizedBox(height: 14),
+                    Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: _amber.withAlpha(15),
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: Row(
+                        children: [
+                          const Icon(Icons.info_outline, size: 16, color: _amber),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              'Jadwal saat ini: hari ${widget.modul.startDay} – '
+                              '${widget.modul.startDay! + widget.modul.durationDays! - 1} '
+                              '(${widget.modul.durationDays} hari)',
+                              style: const TextStyle(fontSize: 12, color: Color(0xFF92400E)),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                  const SizedBox(height: 24),
+                  SizedBox(
+                    width: double.infinity,
+                    height: 50,
+                    child: ElevatedButton(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: _amber,
+                        foregroundColor: Colors.white,
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                        elevation: 0,
+                      ),
+                      onPressed: _loading ? null : _submit,
+                      child: _loading
+                          ? const SizedBox(
+                              width: 22,
+                              height: 22,
+                              child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2.5))
+                          : const Text('Simpan Jadwal',
+                              style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600)),
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                ],
+              ),
             ),
           ),
         ],
       ),
-      actions: [
-        TextButton(onPressed: () => Navigator.pop(context), child: const Text('Batal')),
-        ElevatedButton(
-          style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFFF59E0B), foregroundColor: Colors.white),
-          onPressed: _loading
-              ? null
-              : () async {
-                  final start = int.tryParse(_startCtrl.text.trim());
-                  final duration = int.tryParse(_durationCtrl.text.trim());
-                  if (start == null || duration == null || start < 1 || duration < 1) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('Masukkan angka valid (min 1)')));
-                    return;
-                  }
-                  setState(() => _loading = true);
-                  final nav = Navigator.of(context);
-                  final ok = await widget.onSubmit(start, duration);
-                  if (ok && mounted) nav.pop();
-                  if (mounted) setState(() => _loading = false);
-                },
-          child: _loading
-              ? const SizedBox(
-                  width: 18, height: 18,
-                  child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
-              : const Text('Simpan'),
-        ),
-      ],
     );
   }
 }
 
-class _AddItpDialog extends StatefulWidget {
+class _AddItpSheet extends StatefulWidget {
   final int subBlokId;
   final int projectId;
   final AdminProvider provider;
-  const _AddItpDialog({required this.subBlokId, required this.projectId, required this.provider});
+  const _AddItpSheet({required this.subBlokId, required this.projectId, required this.provider});
 
   @override
-  State<_AddItpDialog> createState() => _AddItpDialogState();
+  State<_AddItpSheet> createState() => _AddItpSheetState();
 }
 
-class _AddItpDialogState extends State<_AddItpDialog> {
+class _AddItpSheetState extends State<_AddItpSheet> {
   final _formKey = GlobalKey<FormState>();
   final _assemblyCodeCtrl = TextEditingController();
   final _assemblyDescCtrl = TextEditingController();
@@ -877,108 +1111,129 @@ class _AddItpDialogState extends State<_AddItpDialog> {
     super.dispose();
   }
 
+  static const _primary = Color(0xFFDC2626);
+
+  Future<void> _submit() async {
+    if (!_formKey.currentState!.validate()) return;
+    setState(() => _loading = true);
+    final nav = Navigator.of(context);
+    final messenger = ScaffoldMessenger.of(context);
+    final ok = await widget.provider.addItp(
+      widget.projectId,
+      subBlokId: widget.subBlokId,
+      assemblyCode: _assemblyCodeCtrl.text.trim(),
+      assemblyDescription:
+          _assemblyDescCtrl.text.trim().isEmpty ? null : _assemblyDescCtrl.text.trim(),
+      code: _codeCtrl.text.trim(),
+      item: _itemCtrl.text.trim(),
+      yardVal: _yardVal,
+      classVal: _classVal,
+      osVal: _osVal,
+      statVal: _statVal,
+      onError: (msg) => messenger.showSnackBar(
+          SnackBar(content: Text(msg), backgroundColor: Colors.red)),
+    );
+    if (!mounted) return;
+    setState(() => _loading = false);
+    if (ok) nav.pop();
+  }
+
   @override
   Widget build(BuildContext context) {
-    return AlertDialog(
-      title: const Row(
+    return Container(
+      decoration: const BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(Icons.assignment_outlined, color: Color(0xFFDC2626), size: 20),
-          SizedBox(width: 8),
-          Text('Tambah Kode ITP', style: TextStyle(fontSize: 15)),
+          _sheetHeader(
+            icon: Icons.assignment_outlined,
+            color: _primary,
+            title: 'Tambah Kode ITP',
+            subtitle: 'Tambahkan item inspeksi baru',
+          ),
+          const SizedBox(height: 16),
+          Divider(height: 1, color: Colors.grey.shade100),
+          Flexible(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.all(20),
+              child: Form(
+                key: _formKey,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Expanded(
+                          child: TextFormField(
+                            controller: _assemblyCodeCtrl,
+                            decoration: _sheetInputDecoration('Assembly Code', Icons.qr_code, _primary),
+                            validator: (v) => (v == null || v.isEmpty) ? 'Wajib' : null,
+                          ),
+                        ),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: TextFormField(
+                            controller: _codeCtrl,
+                            decoration: _sheetInputDecoration('Kode ITP', Icons.tag, _primary),
+                            validator: (v) => (v == null || v.isEmpty) ? 'Wajib' : null,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 14),
+                    TextFormField(
+                      controller: _assemblyDescCtrl,
+                      decoration: _sheetInputDecoration('Deskripsi Assembly', Icons.notes_outlined, _primary),
+                    ),
+                    const SizedBox(height: 14),
+                    TextFormField(
+                      controller: _itemCtrl,
+                      maxLines: 2,
+                      decoration: _sheetInputDecoration(
+                          'Item/Deskripsi Pekerjaan', Icons.checklist, _primary, maxLines: 2),
+                      validator: (v) => (v == null || v.isEmpty) ? 'Wajib' : null,
+                    ),
+                    const SizedBox(height: 18),
+                    const Text('NILAI PARTISIPASI',
+                        style: TextStyle(fontSize: 10, fontWeight: FontWeight.w800,
+                            letterSpacing: 0.8, color: Color(0xFF64748B))),
+                    const SizedBox(height: 8),
+                    _valRow('Yard', _yardVal, (v) => setState(() => _yardVal = v)),
+                    _valRow('Class', _classVal, (v) => setState(() => _classVal = v)),
+                    _valRow('OS', _osVal, (v) => setState(() => _osVal = v)),
+                    _valRow('Stat', _statVal, (v) => setState(() => _statVal = v)),
+                    const SizedBox(height: 24),
+                    SizedBox(
+                      width: double.infinity,
+                      height: 50,
+                      child: ElevatedButton(
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: _primary,
+                          foregroundColor: Colors.white,
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                          elevation: 0,
+                        ),
+                        onPressed: _loading ? null : _submit,
+                        child: _loading
+                            ? const SizedBox(
+                                width: 22,
+                                height: 22,
+                                child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2.5))
+                            : const Text('Simpan Kode ITP',
+                                style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600)),
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                  ],
+                ),
+              ),
+            ),
+          ),
         ],
       ),
-      content: Form(
-        key: _formKey,
-        child: SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Row(
-                children: [
-                  Expanded(
-                    child: TextFormField(
-                      controller: _assemblyCodeCtrl,
-                      decoration: const InputDecoration(
-                          labelText: 'Assembly Code', border: OutlineInputBorder()),
-                      validator: (v) => (v == null || v.isEmpty) ? 'Wajib' : null,
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: TextFormField(
-                      controller: _codeCtrl,
-                      decoration: const InputDecoration(
-                          labelText: 'Kode ITP', border: OutlineInputBorder()),
-                      validator: (v) => (v == null || v.isEmpty) ? 'Wajib' : null,
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 10),
-              TextFormField(
-                controller: _assemblyDescCtrl,
-                decoration: const InputDecoration(
-                    labelText: 'Deskripsi Assembly', border: OutlineInputBorder()),
-              ),
-              const SizedBox(height: 10),
-              TextFormField(
-                controller: _itemCtrl,
-                decoration: const InputDecoration(
-                    labelText: 'Item/Deskripsi Pekerjaan', border: OutlineInputBorder()),
-                maxLines: 2,
-                validator: (v) => (v == null || v.isEmpty) ? 'Wajib' : null,
-              ),
-              const SizedBox(height: 12),
-              const Text('NILAI PARTISIPASI',
-                  style: TextStyle(fontSize: 10, fontWeight: FontWeight.w800,
-                      letterSpacing: 0.8, color: Color(0xFF64748B))),
-              const SizedBox(height: 8),
-              _valRow('Yard', _yardVal, (v) => setState(() => _yardVal = v)),
-              _valRow('Class', _classVal, (v) => setState(() => _classVal = v)),
-              _valRow('OS', _osVal, (v) => setState(() => _osVal = v)),
-              _valRow('Stat', _statVal, (v) => setState(() => _statVal = v)),
-            ],
-          ),
-        ),
-      ),
-      actions: [
-        TextButton(onPressed: () => Navigator.pop(context), child: const Text('Batal')),
-        ElevatedButton(
-          style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFFDC2626), foregroundColor: Colors.white),
-          onPressed: _loading
-              ? null
-              : () async {
-                  if (!_formKey.currentState!.validate()) return;
-                  setState(() => _loading = true);
-                  final nav = Navigator.of(context);
-                  final messenger = ScaffoldMessenger.of(context);
-                  final ok = await widget.provider.addItp(
-                    widget.projectId,
-                    subBlokId: widget.subBlokId,
-                    assemblyCode: _assemblyCodeCtrl.text.trim(),
-                    assemblyDescription: _assemblyDescCtrl.text.trim().isEmpty
-                        ? null
-                        : _assemblyDescCtrl.text.trim(),
-                    code: _codeCtrl.text.trim(),
-                    item: _itemCtrl.text.trim(),
-                    yardVal: _yardVal,
-                    classVal: _classVal,
-                    osVal: _osVal,
-                    statVal: _statVal,
-                    onError: (msg) => messenger.showSnackBar(
-                        SnackBar(content: Text(msg), backgroundColor: Colors.red)),
-                  );
-                  if (ok && mounted) nav.pop();
-                  if (mounted) setState(() => _loading = false);
-                },
-          child: _loading
-              ? const SizedBox(
-                  width: 18, height: 18,
-                  child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
-              : const Text('Simpan'),
-        ),
-      ],
     );
   }
 

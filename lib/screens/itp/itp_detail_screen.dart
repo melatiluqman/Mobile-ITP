@@ -152,6 +152,7 @@ class _ItpDetailScreenState extends State<ItpDetailScreen> {
     final canSubmit = _data!['can_submit'] as bool? ?? false;
     final photoRequired = _data!['photo_required'] as bool? ?? false;
     final myVal = _data!['val'] as String? ?? '-';
+    final myRole = _data!['role'] as String? ?? '';
 
     return Consumer<ItpProvider>(
       builder: (context, provider, child) => LoadingOverlay(
@@ -192,6 +193,10 @@ class _ItpDetailScreenState extends State<ItpDetailScreen> {
               ),
               const SizedBox(height: 12),
 
+              // Status grid for all 4 roles
+              _RoleStatusGrid(itp: itp, allData: allData, myRole: myRole),
+              const SizedBox(height: 12),
+
               // Submit form
               if (canSubmit) ...[
                 Card(
@@ -201,7 +206,12 @@ class _ItpDetailScreenState extends State<ItpDetailScreen> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(myData != null ? 'Perbarui Data' : 'Submit Data',
+                        Text(
+                            myData?.status == 'needs_revision'
+                                ? 'Resubmit Data ITP'
+                                : myData != null
+                                    ? 'Perbarui Data'
+                                    : 'Submit Data',
                             style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
                         const SizedBox(height: 12),
                         TextField(
@@ -214,7 +224,20 @@ class _ItpDetailScreenState extends State<ItpDetailScreen> {
                         ),
                         const SizedBox(height: 12),
                         if (photoRequired || myData?.photo != null) ...[
-                          const Text('Foto', style: TextStyle(fontWeight: FontWeight.w500)),
+                          Row(
+                            children: [
+                              const Text('Foto', style: TextStyle(fontWeight: FontWeight.w500)),
+                              const SizedBox(width: 6),
+                              Text(
+                                photoRequired ? 'WAJIB (Witness)' : 'Opsional',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w700,
+                                  color: photoRequired ? const Color(0xFFDC2626) : const Color(0xFF64748B),
+                                ),
+                              ),
+                            ],
+                          ),
                           const SizedBox(height: 8),
                           if (myData?.photo != null && _pickedPhoto == null)
                             ClipRRect(
@@ -246,7 +269,13 @@ class _ItpDetailScreenState extends State<ItpDetailScreen> {
                           width: double.infinity,
                           child: ElevatedButton(
                             onPressed: _submit,
-                            child: Text(myData != null ? 'Perbarui Data ITP' : 'Simpan Data ITP'),
+                            child: Text(
+                              myData?.status == 'needs_revision'
+                                  ? 'Resubmit Data ITP'
+                                  : myData != null
+                                      ? 'Update Data ITP'
+                                      : 'Simpan Data ITP',
+                            ),
                           ),
                         ),
                       ],
@@ -263,15 +292,36 @@ class _ItpDetailScreenState extends State<ItpDetailScreen> {
                   color: _statusBgColor(myData.status),
                   child: Padding(
                     padding: const EdgeInsets.all(12),
-                    child: Row(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Icon(_statusIcon(myData.status), color: _statusColor(myData.status)),
-                        const SizedBox(width: 8),
-                        Text(myData.statusLabel,
-                            style: TextStyle(color: _statusColor(myData.status), fontWeight: FontWeight.bold)),
-                        if (myData.rejectionNote != null) ...[
-                          const SizedBox(width: 8),
-                          Expanded(child: Text(myData.rejectionNote!, style: const TextStyle(fontSize: 12))),
+                        Row(
+                          children: [
+                            Icon(_statusIcon(myData.status), color: _statusColor(myData.status)),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: Text(
+                                myData.status == 'approved' ? 'Data Anda sudah di-ACC' : myData.statusLabel,
+                                style: TextStyle(color: _statusColor(myData.status), fontWeight: FontWeight.bold),
+                              ),
+                            ),
+                          ],
+                        ),
+                        if (myData.status == 'approved' && myData.approvedAt != null) ...[
+                          const SizedBox(height: 4),
+                          Padding(
+                            padding: const EdgeInsets.only(left: 32),
+                            child: Text('Disetujui: ${myData.approvedAt}',
+                                style: const TextStyle(fontSize: 12, color: Color(0xFF166534))),
+                          ),
+                        ],
+                        if (myData.status == 'needs_revision' && myData.rejectionNote != null) ...[
+                          const SizedBox(height: 4),
+                          Padding(
+                            padding: const EdgeInsets.only(left: 32),
+                            child: Text('Catatan: ${myData.rejectionNote}',
+                                style: const TextStyle(fontSize: 12, color: Color(0xFF991B1B))),
+                          ),
                         ],
                       ],
                     ),
@@ -280,9 +330,24 @@ class _ItpDetailScreenState extends State<ItpDetailScreen> {
                 const SizedBox(height: 12),
               ],
 
-              // All data
+              // Review subordinate / all parties' data
               if (allData.isNotEmpty) ...[
-                const Text('Data Semua Pihak', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
+                Row(
+                  children: [
+                    const Text('Review Data', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
+                    const SizedBox(width: 6),
+                    if (allData.any((d) => d.canAcc || d.canReject))
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFFEF3C7),
+                          borderRadius: BorderRadius.circular(6),
+                        ),
+                        child: const Text('Menunggu Review',
+                            style: TextStyle(fontSize: 10, fontWeight: FontWeight.w700, color: Color(0xFF92400E))),
+                      ),
+                  ],
+                ),
                 const SizedBox(height: 8),
                 ...allData.map((d) => _DataCard(data: d, onApprove: _approve, onReject: _reject)),
               ],
@@ -411,6 +476,141 @@ class _DataCard extends StatelessWidget {
       case 'needs_revision': return Colors.orange;
       default: return Colors.grey;
     }
+  }
+}
+
+// Status grid showing every role's val + ACC-chain status (§3.5.f.1)
+class _RoleStatusGrid extends StatelessWidget {
+  final Map<String, dynamic> itp;
+  final List<ItpDataModel> allData;
+  final String myRole;
+  const _RoleStatusGrid({required this.itp, required this.allData, required this.myRole});
+
+  static const _roles = [
+    ('yard', 'Yard', 'yard_val'),
+    ('os', 'OS', 'os_val'),
+    ('class', 'Class', 'class_val'),
+    ('stat', 'Stat', 'stat_val'),
+  ];
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: const Color(0xFFE2E8F0)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text('Status Semua Pihak',
+              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: Color(0xFF1E293B))),
+          const SizedBox(height: 10),
+          Row(
+            children: _roles.map((r) {
+              final isLast = r == _roles.last;
+              return Expanded(
+                child: Padding(
+                  padding: EdgeInsets.only(right: isLast ? 0 : 8),
+                  child: _RoleBox(
+                    label: r.$2,
+                    val: itp[r.$3] as String?,
+                    status: _statusFor(r.$1),
+                    isMe: r.$1 == myRole,
+                  ),
+                ),
+              );
+            }).toList(),
+          ),
+        ],
+      ),
+    );
+  }
+
+  String? _statusFor(String roleKey) {
+    for (final d in allData) {
+      if (d.role == roleKey) return d.status;
+    }
+    return null;
+  }
+}
+
+class _RoleBox extends StatelessWidget {
+  final String label;
+  final String? val;
+  final String? status;
+  final bool isMe;
+  const _RoleBox({required this.label, required this.val, required this.status, required this.isMe});
+
+  @override
+  Widget build(BuildContext context) {
+    final v = (val ?? '-').toUpperCase();
+    final involved = v == 'W' || v == 'RV';
+
+    String statusLabel;
+    Color statusColor;
+    if (!involved) {
+      statusLabel = '—';
+      statusColor = const Color(0xFF94A3B8);
+    } else {
+      switch (status) {
+        case 'approved':
+          statusLabel = 'ACC';
+          statusColor = const Color(0xFF2563EB);
+          break;
+        case 'done':
+          statusLabel = 'Done';
+          statusColor = const Color(0xFF10B981);
+          break;
+        case 'needs_revision':
+          statusLabel = 'Revisi';
+          statusColor = const Color(0xFFDC2626);
+          break;
+        default:
+          statusLabel = 'Pending';
+          statusColor = const Color(0xFFD97706);
+      }
+    }
+
+    return Container(
+      padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 6),
+      decoration: BoxDecoration(
+        color: isMe ? const Color(0xFFDC2626).withAlpha(12) : const Color(0xFFF8FAFC),
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(
+          color: isMe ? const Color(0xFFDC2626) : const Color(0xFFE2E8F0),
+          width: isMe ? 1.4 : 1,
+        ),
+      ),
+      child: Column(
+        children: [
+          Text(
+            label,
+            style: TextStyle(
+              fontSize: 11,
+              fontWeight: FontWeight.w800,
+              color: isMe ? const Color(0xFFDC2626) : const Color(0xFF475569),
+            ),
+          ),
+          const SizedBox(height: 4),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+            decoration: BoxDecoration(
+              color: const Color(0xFFF1F5F9),
+              borderRadius: BorderRadius.circular(4),
+            ),
+            child: Text(v, style: const TextStyle(fontSize: 10, fontWeight: FontWeight.w800, color: Color(0xFF334155))),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            statusLabel,
+            style: TextStyle(fontSize: 10, fontWeight: FontWeight.w700, color: statusColor),
+          ),
+        ],
+      ),
+    );
   }
 }
 
