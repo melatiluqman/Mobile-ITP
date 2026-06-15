@@ -264,6 +264,10 @@ class _ModulsScreenState extends State<ModulsScreen> {
         ),
       ));
     }
+    // Spacer bawah agar kartu terakhir tidak ketutupan system nav/gesture bar.
+    slivers.add(SliverToBoxAdapter(
+      child: SizedBox(height: 16 + MediaQuery.of(context).padding.bottom),
+    ));
     return slivers;
   }
 

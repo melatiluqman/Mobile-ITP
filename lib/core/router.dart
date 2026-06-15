@@ -3,13 +3,11 @@ import 'package:go_router/go_router.dart';
 import '../providers/auth_provider.dart';
 import '../screens/auth/login_screen.dart';
 import '../screens/home_screen.dart';
-import '../screens/itp/project_list_screen.dart';
 import '../screens/itp/moduls_screen.dart';
 import '../screens/itp/bloks_screen.dart';
 import '../screens/itp/subbloks_screen.dart';
 import '../screens/itp/assembly_screen.dart';
 import '../screens/itp/itp_detail_screen.dart';
-import '../screens/messages/message_channels_screen.dart';
 import '../screens/messages/chat_screen.dart';
 import '../screens/notifications/notifications_screen.dart';
 import '../screens/admin/admin_dashboard_screen.dart';
@@ -39,42 +37,39 @@ GoRouter createRouter(AuthProvider auth) => GoRouter(
         GoRoute(
           path: '/home',
           builder: (context, state) => const HomeScreen(),
+          // Catatan: daftar Proyek & Pesan dirender sebagai TAB di dalam HomeScreen,
+          // jadi tidak perlu route standalone perantara. Drill-down langsung jadi
+          // anak '/home' agar 1x back kembali ke HomeScreen (bottom nav tetap ada).
           routes: [
             GoRoute(
-              path: 'projects',
-              builder: (context, state) => const ProjectListScreen(),
+              path: 'projects/:projectId/moduls',
+              builder: (context, state) => ModulsScreen(
+                projectId: int.parse(state.pathParameters['projectId']!),
+              ),
               routes: [
                 GoRoute(
-                  path: ':projectId/moduls',
-                  builder: (context, state) => ModulsScreen(
-                    projectId: int.parse(state.pathParameters['projectId']!),
+                  path: ':modulId/bloks',
+                  builder: (context, state) => BloksScreen(
+                    modulId: int.parse(state.pathParameters['modulId']!),
                   ),
                   routes: [
                     GoRoute(
-                      path: ':modulId/bloks',
-                      builder: (context, state) => BloksScreen(
-                        modulId: int.parse(state.pathParameters['modulId']!),
+                      path: ':blokId/subbloks',
+                      builder: (context, state) => SubBloksScreen(
+                        blokId: int.parse(state.pathParameters['blokId']!),
                       ),
                       routes: [
                         GoRoute(
-                          path: ':blokId/subbloks',
-                          builder: (context, state) => SubBloksScreen(
-                            blokId: int.parse(state.pathParameters['blokId']!),
+                          path: ':subblokId/assembly',
+                          builder: (context, state) => AssemblyScreen(
+                            subblokId: int.parse(state.pathParameters['subblokId']!),
                           ),
                           routes: [
                             GoRoute(
-                              path: ':subblokId/assembly',
-                              builder: (context, state) => AssemblyScreen(
-                                subblokId: int.parse(state.pathParameters['subblokId']!),
+                              path: ':itpId/detail',
+                              builder: (context, state) => ItpDetailScreen(
+                                itpId: int.parse(state.pathParameters['itpId']!),
                               ),
-                              routes: [
-                                GoRoute(
-                                  path: ':itpId/detail',
-                                  builder: (context, state) => ItpDetailScreen(
-                                    itpId: int.parse(state.pathParameters['itpId']!),
-                                  ),
-                                ),
-                              ],
                             ),
                           ],
                         ),
@@ -85,21 +80,23 @@ GoRouter createRouter(AuthProvider auth) => GoRouter(
               ],
             ),
             GoRoute(
-              path: 'messages',
-              builder: (context, state) => const MessageChannelsScreen(),
-              routes: [
-                GoRoute(
-                  path: ':projectId/chat',
-                  builder: (context, state) => ChatScreen(
-                    projectId: int.parse(state.pathParameters['projectId']!),
-                    projectName: state.uri.queryParameters['name'] ?? 'Chat',
-                  ),
-                ),
-              ],
+              path: 'messages/:projectId/chat',
+              builder: (context, state) => ChatScreen(
+                projectId: int.parse(state.pathParameters['projectId']!),
+                projectName: state.uri.queryParameters['name'] ?? 'Chat',
+              ),
             ),
             GoRoute(
               path: 'notifications',
               builder: (context, state) => const NotificationsScreen(),
+            ),
+            // Deep-link langsung ke detail ITP (dipakai dari notifikasi).
+            // ItpDetailScreen self-contained: cukup itpId, memuat datanya sendiri.
+            GoRoute(
+              path: 'itp/:itpId',
+              builder: (context, state) => ItpDetailScreen(
+                itpId: int.parse(state.pathParameters['itpId']!),
+              ),
             ),
           ],
         ),

@@ -25,8 +25,10 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
 
   void _onTapNotification(MessageProvider provider, NotificationModel n) {
     provider.markNotificationRead(n.id);
-    // Arahkan ke proyek terkait bila ada (drill-down ke modul → blok → ITP).
-    if (n.relatedProjectId != null) {
+    // Utamakan deep-link langsung ke detail ITP terkait; jika tak ada, ke modul proyek.
+    if (n.relatedItpId != null) {
+      context.go('/home/itp/${n.relatedItpId}');
+    } else if (n.relatedProjectId != null) {
       context.go('/home/projects/${n.relatedProjectId}/moduls');
     }
   }
@@ -134,7 +136,7 @@ class _NotifTile extends StatelessWidget {
         ),
         isThreeLine: true,
         trailing: notification.isRead
-            ? (notification.relatedProjectId != null
+            ? ((notification.relatedItpId != null || notification.relatedProjectId != null)
                 ? const Icon(Icons.chevron_right, color: Color(0xFF94A3B8), size: 20)
                 : null)
             : Container(

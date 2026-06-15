@@ -98,7 +98,7 @@ class _AssemblyScreenState extends State<AssemblyScreen> {
                         )
                       else
                         SliverPadding(
-                          padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
+                          padding: EdgeInsets.fromLTRB(16, 0, 16, 24 + MediaQuery.of(context).padding.bottom),
                           sliver: SliverList(
                             delegate: SliverChildBuilderDelegate(
                               (context, i) => _AssemblyCard(

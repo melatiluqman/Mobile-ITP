@@ -68,7 +68,7 @@ class _BloksScreenState extends State<BloksScreen> {
                       color: _primary,
                       onRefresh: _load,
                       child: ListView.builder(
-                        padding: const EdgeInsets.all(16),
+                        padding: EdgeInsets.fromLTRB(16, 16, 16, 16 + MediaQuery.of(context).padding.bottom),
                         itemCount: _bloks.length,
                         itemBuilder: (context, i) => _BlokCard(
                           blok: _bloks[i],
