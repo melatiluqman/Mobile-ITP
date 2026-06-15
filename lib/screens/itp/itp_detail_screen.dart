@@ -22,7 +22,6 @@ class _ItpDetailScreenState extends State<ItpDetailScreen> {
   String? _error;
   final _keteranganController = TextEditingController();
   XFile? _pickedPhoto;
-  final _rejectNoteController = TextEditingController();
 
   @override
   void initState() {
@@ -33,7 +32,6 @@ class _ItpDetailScreenState extends State<ItpDetailScreen> {
   @override
   void dispose() {
     _keteranganController.dispose();
-    _rejectNoteController.dispose();
     super.dispose();
   }
 
@@ -99,41 +97,28 @@ class _ItpDetailScreenState extends State<ItpDetailScreen> {
   }
 
   Future<void> _reject(int dataId) async {
-    _rejectNoteController.clear();
-    final confirmed = await showDialog<bool>(
+    final note = await showModalBottomSheet<String>(
       context: context,
-      builder: (_) => AlertDialog(
-        title: const Text('Tolak Data'),
-        content: TextField(
-          controller: _rejectNoteController,
-          decoration: const InputDecoration(labelText: 'Catatan penolakan', border: OutlineInputBorder()),
-          maxLines: 3,
-        ),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Batal')),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
-            onPressed: () => Navigator.pop(context, true),
-            child: const Text('Tolak', style: TextStyle(color: Colors.white)),
-          ),
-        ],
+      isScrollControlled: true,
+      useSafeArea: true,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) => Padding(
+        padding: MediaQuery.of(ctx).viewInsets,
+        child: const _RejectSheet(),
       ),
     );
-    if (confirmed == true && _rejectNoteController.text.trim().length >= 3) {
-      final note = _rejectNoteController.text.trim();
-      if (!mounted) return;
-      await context.read<ItpProvider>().rejectItpData(
-        dataId,
-        note,
-        onSuccess: (msg) {
-          ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg)));
-          _load();
-        },
-        onError: (msg) => ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(msg), backgroundColor: Colors.red),
-        ),
-      );
-    }
+    if (note == null || !mounted) return;
+    await context.read<ItpProvider>().rejectItpData(
+      dataId,
+      note,
+      onSuccess: (msg) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg)));
+        _load();
+      },
+      onError: (msg) => ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(msg), backgroundColor: Colors.red),
+      ),
+    );
   }
 
   @override
@@ -650,6 +635,198 @@ class _ValBadge extends StatelessWidget {
         border: Border.all(color: const Color(0xFFE2E8F0)),
       ),
       child: Text('$role: $value', style: const TextStyle(fontSize: 11)),
+    );
+  }
+}
+
+// Modern bottom sheet for entering a rejection reason (min 3 chars).
+class _RejectSheet extends StatefulWidget {
+  const _RejectSheet();
+
+  @override
+  State<_RejectSheet> createState() => _RejectSheetState();
+}
+
+class _RejectSheetState extends State<_RejectSheet> {
+  static const _danger = Color(0xFFDC2626);
+  final _ctrl = TextEditingController();
+  String? _error;
+
+  static const _quickReasons = [
+    'Foto tidak jelas / kurang',
+    'Data tidak sesuai',
+    'Perlu pengukuran ulang',
+    'Dokumentasi belum lengkap',
+  ];
+
+  @override
+  void dispose() {
+    _ctrl.dispose();
+    super.dispose();
+  }
+
+  void _submit() {
+    final note = _ctrl.text.trim();
+    if (note.length < 3) {
+      setState(() => _error = 'Alasan minimal 3 karakter');
+      return;
+    }
+    Navigator.of(context).pop(note);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      decoration: const BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            margin: const EdgeInsets.only(top: 12),
+            width: 40,
+            height: 4,
+            decoration: BoxDecoration(
+              color: const Color(0xFFCBD5E1),
+              borderRadius: BorderRadius.circular(2),
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(20, 20, 20, 0),
+            child: Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    color: _danger.withAlpha(15),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: const Icon(Icons.block_outlined, color: _danger, size: 22),
+                ),
+                const SizedBox(width: 12),
+                const Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text('Tolak Data', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                      Text('Beri alasan agar bisa diperbaiki',
+                          style: TextStyle(fontSize: 13, color: Color(0xFF64748B))),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 16),
+          Divider(height: 1, color: Colors.grey.shade100),
+          Flexible(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.all(20),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text('Alasan cepat',
+                      style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Color(0xFF64748B))),
+                  const SizedBox(height: 8),
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: _quickReasons.map((r) {
+                      return GestureDetector(
+                        onTap: () {
+                          setState(() {
+                            _ctrl.text = r;
+                            _ctrl.selection = TextSelection.fromPosition(
+                                TextPosition(offset: _ctrl.text.length));
+                            _error = null;
+                          });
+                        },
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                          decoration: BoxDecoration(
+                            color: _danger.withAlpha(12),
+                            borderRadius: BorderRadius.circular(10),
+                            border: Border.all(color: _danger.withAlpha(40)),
+                          ),
+                          child: Text(r,
+                              style: const TextStyle(fontSize: 12, color: _danger, fontWeight: FontWeight.w500)),
+                        ),
+                      );
+                    }).toList(),
+                  ),
+                  const SizedBox(height: 16),
+                  TextField(
+                    controller: _ctrl,
+                    autofocus: true,
+                    maxLines: 4,
+                    onChanged: (_) {
+                      if (_error != null) setState(() => _error = null);
+                    },
+                    decoration: InputDecoration(
+                      hintText: 'Tulis alasan penolakan...',
+                      errorText: _error,
+                      filled: true,
+                      fillColor: const Color(0xFFF8FAFC),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: const BorderSide(color: Color(0xFFE2E8F0)),
+                      ),
+                      enabledBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: const BorderSide(color: Color(0xFFE2E8F0)),
+                      ),
+                      focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: const BorderSide(color: _danger, width: 1.5),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: SizedBox(
+                          height: 50,
+                          child: OutlinedButton(
+                            style: OutlinedButton.styleFrom(
+                              foregroundColor: const Color(0xFF475569),
+                              side: const BorderSide(color: Color(0xFFE2E8F0)),
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                            ),
+                            onPressed: () => Navigator.pop(context),
+                            child: const Text('Batal', style: TextStyle(fontWeight: FontWeight.w600)),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: SizedBox(
+                          height: 50,
+                          child: ElevatedButton.icon(
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: _danger,
+                              foregroundColor: Colors.white,
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                              elevation: 0,
+                            ),
+                            onPressed: _submit,
+                            icon: const Icon(Icons.send_outlined, size: 18),
+                            label: const Text('Kirim Penolakan',
+                                style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

@@ -55,7 +55,11 @@ class _HomeScreenState extends State<HomeScreen> {
       body: navItems[_selectedIndex].screen,
       bottomNavigationBar: NavigationBar(
         selectedIndex: _selectedIndex,
-        onDestinationSelected: (i) => setState(() => _selectedIndex = i),
+        onDestinationSelected: (i) {
+          setState(() => _selectedIndex = i);
+          // Jaga badge notifikasi tetap segar setiap pindah tab.
+          context.read<MessageProvider>().loadUnreadCount();
+        },
         backgroundColor: Colors.white,
         surfaceTintColor: Colors.transparent,
         indicatorColor: const Color(0xFFDC2626).withAlpha(20),

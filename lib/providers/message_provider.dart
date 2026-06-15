@@ -67,6 +67,7 @@ class MessageProvider extends ChangeNotifier {
     _error = null;
     try {
       _notifications = await MessageService().getNotifications();
+      _unreadNotifications = _notifications.where((n) => !n.isRead).length;
     } on ApiException catch (e) {
       _error = e.message;
     } finally {
@@ -82,41 +83,20 @@ class MessageProvider extends ChangeNotifier {
   }
 
   Future<void> markNotificationRead(int id) async {
+    final idx = _notifications.indexWhere((n) => n.id == id);
+    if (idx == -1 || _notifications[idx].isRead) return;
     try {
       await MessageService().markNotificationRead(id);
-      final idx = _notifications.indexWhere((n) => n.id == id);
-      if (idx != -1) {
-        _notifications[idx] = NotificationModel(
-          id: _notifications[idx].id,
-          userId: _notifications[idx].userId,
-          type: _notifications[idx].type,
-          title: _notifications[idx].title,
-          message: _notifications[idx].message,
-          link: _notifications[idx].link,
-          isRead: true,
-          createdAt: _notifications[idx].createdAt,
-          senderName: _notifications[idx].senderName,
-        );
-        if (_unreadNotifications > 0) _unreadNotifications--;
-        notifyListeners();
-      }
+      _notifications[idx] = _notifications[idx].copyWith(isRead: true);
+      if (_unreadNotifications > 0) _unreadNotifications--;
+      notifyListeners();
     } on ApiException catch (_) {}
   }
 
   Future<void> markAllNotificationsRead() async {
     try {
       await MessageService().markAllNotificationsRead();
-      _notifications = _notifications.map((n) => NotificationModel(
-        id: n.id,
-        userId: n.userId,
-        type: n.type,
-        title: n.title,
-        message: n.message,
-        link: n.link,
-        isRead: true,
-        createdAt: n.createdAt,
-        senderName: n.senderName,
-      )).toList();
+      _notifications = _notifications.map((n) => n.copyWith(isRead: true)).toList();
       _unreadNotifications = 0;
       notifyListeners();
     } on ApiException catch (_) {}

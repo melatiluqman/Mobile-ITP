@@ -8,6 +8,8 @@ class NotificationModel {
   final bool isRead;
   final String? createdAt;
   final String? senderName;
+  final int? relatedProjectId;
+  final int? relatedItpId;
 
   const NotificationModel({
     required this.id,
@@ -19,6 +21,8 @@ class NotificationModel {
     required this.isRead,
     this.createdAt,
     this.senderName,
+    this.relatedProjectId,
+    this.relatedItpId,
   });
 
   factory NotificationModel.fromJson(Map<String, dynamic> json) => NotificationModel(
@@ -33,5 +37,21 @@ class NotificationModel {
         senderName: json['sender'] != null
             ? (json['sender'] as Map<String, dynamic>)['name'] as String?
             : null,
+        relatedProjectId: json['related_project_id'] as int?,
+        relatedItpId: json['related_itp_id'] as int?,
+      );
+
+  NotificationModel copyWith({bool? isRead}) => NotificationModel(
+        id: id,
+        userId: userId,
+        type: type,
+        title: title,
+        message: message,
+        link: link,
+        isRead: isRead ?? this.isRead,
+        createdAt: createdAt,
+        senderName: senderName,
+        relatedProjectId: relatedProjectId,
+        relatedItpId: relatedItpId,
       );
 }

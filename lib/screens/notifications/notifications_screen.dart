@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import '../../providers/message_provider.dart';
 import '../../models/notification_model.dart';
@@ -20,6 +21,14 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       context.read<MessageProvider>().loadNotifications();
     });
+  }
+
+  void _onTapNotification(MessageProvider provider, NotificationModel n) {
+    provider.markNotificationRead(n.id);
+    // Arahkan ke proyek terkait bila ada (drill-down ke modul → blok → ITP).
+    if (n.relatedProjectId != null) {
+      context.go('/home/projects/${n.relatedProjectId}/moduls');
+    }
   }
 
   @override
@@ -55,12 +64,13 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
             );
           }
           return RefreshIndicator(
+            color: const Color(0xFFDC2626),
             onRefresh: provider.loadNotifications,
             child: ListView.builder(
               itemCount: provider.notifications.length,
               itemBuilder: (context, i) => _NotifTile(
                 notification: provider.notifications[i],
-                onTap: () => provider.markNotificationRead(provider.notifications[i].id),
+                onTap: () => _onTapNotification(provider, provider.notifications[i]),
               ),
             ),
           );
@@ -75,18 +85,31 @@ class _NotifTile extends StatelessWidget {
   final VoidCallback onTap;
   const _NotifTile({required this.notification, required this.onTap});
 
+  ({IconData icon, Color color}) get _visual {
+    switch (notification.type) {
+      case 'submit':
+        return (icon: Icons.upload_file_outlined, color: const Color(0xFF3B82F6));
+      case 'approved':
+        return (icon: Icons.check_circle_outline, color: const Color(0xFF10B981));
+      case 'needs_revision':
+      case 'rejected':
+        return (icon: Icons.cancel_outlined, color: const Color(0xFFDC2626));
+      default:
+        return (icon: Icons.notifications_outlined, color: const Color(0xFF0F172A));
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
+    final v = _visual;
     return Container(
-      color: notification.isRead ? null : const Color(0xFF0F172A).withAlpha(13),
+      color: notification.isRead ? null : v.color.withAlpha(13),
       child: ListTile(
         leading: CircleAvatar(
-          backgroundColor: notification.isRead
-              ? Colors.grey.shade200
-              : const Color(0xFF0F172A).withAlpha(40),
+          backgroundColor: notification.isRead ? Colors.grey.shade200 : v.color.withAlpha(30),
           child: Icon(
-            Icons.notifications_outlined,
-            color: notification.isRead ? Colors.grey : const Color(0xFF0F172A),
+            v.icon,
+            color: notification.isRead ? Colors.grey : v.color,
             size: 20,
           ),
         ),
@@ -111,16 +134,18 @@ class _NotifTile extends StatelessWidget {
         ),
         isThreeLine: true,
         trailing: notification.isRead
-            ? null
+            ? (notification.relatedProjectId != null
+                ? const Icon(Icons.chevron_right, color: Color(0xFF94A3B8), size: 20)
+                : null)
             : Container(
                 width: 8,
                 height: 8,
-                decoration: const BoxDecoration(
-                  color: Color(0xFF0F172A),
+                decoration: BoxDecoration(
+                  color: v.color,
                   shape: BoxShape.circle,
                 ),
               ),
-        onTap: notification.isRead ? null : onTap,
+        onTap: onTap,
       ),
     );
   }
